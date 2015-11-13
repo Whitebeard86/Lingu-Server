@@ -33,6 +33,6 @@ function processRequest (request, socket) {
     }
 }
 
-function handleLogin(player_info) {
+function handleLogin(request, socket) {
     // handle login here..
 }
