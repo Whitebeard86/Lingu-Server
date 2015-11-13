@@ -1,15 +1,38 @@
-var io = require('socket.io')(8080);
+var ACTIONS = {
+    REGISTER: 1,
+    LOGIN: 2
+};
 
+var DATABASE = {
+    MYSQL: {
+        HOST_NAME: "anlagehub.com",
+        DATABASE: "anlageme_lingu",
+        USER: "anlageme_lingu",
+        PASSWORD: "agrav_lingu22!"
+    }
+};
+
+var io = require('socket.io')(8080);
 io.on('connection', function (socket) {
-  socket.on('message', onMessageReceived);
-  socket.on('disconnect', function () { });
+    socket.on('message', function(message) { onMessageReceived(message, socket); });
+    socket.on('disconnect', function () {});
 });
 
-function onMessageReceived(msg) {
-    var decoded = JSON.parse(msg);
-    console.log(decoded.action);
-
-    for(var i in decoded.params) {
-        console.log(i + ": " + decoded.params[i]);
+function onMessageReceived (msg, socket) {
+    var request = JSON.parse(msg);
+    if(request.action) {
+        processRequest(request, socket);
     }
+}
+
+function processRequest (request, socket) {
+    switch(request.action) {
+        case ACTIONS.LOGIN:
+            handleLogin(request, socket);
+            break;
+    }
+}
+
+function handleLogin(player_info) {
+    // handle login here..
 }
