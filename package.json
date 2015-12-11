@@ -1,6 +1,10 @@
 {
-    "name": "scarlet-server",
-    "version": "0.0.1",
-    "description": "Scarlet Server Application",
-    "dependencies": {}
+  "name": "scarlet-server",
+  "version": "0.0.1",
+  "description": "Scarlet Server Application",
+  "dependencies": {
+    "express": "^4.10.6",
+    "mysql": "^2.9.0",
+    "q": "^1.4.1"
+  }
 }
