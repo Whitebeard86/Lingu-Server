@@ -1,3 +1,12 @@
+String.prototype.format = function() {
+	var formatted = this;
+	for (var i = 0; i < arguments.length; i++) {
+		var regexp = new RegExp('\\{'+i+'\\}', 'gi');
+		formatted = formatted.replace(regexp, arguments[i]);
+	}
+	return formatted;
+};
+
 var ACTIONS = {
 	REGISTER: 1,
 	LOGIN: 2
@@ -71,7 +80,7 @@ function handleLogin(request, socket) {
 	try {
 		//mysqlConn.connect();
 
-		var sql = "SELECT p.id_player FROM player p WHERE p.username = '" + request.username +
+		var sql = "SELECT p.id_player as id, p.username as name, p.email, p.avatar_url as avatar FROM player p WHERE p.username = '" + request.username +
 			"' AND p.password = MD5('" + request.password + "')";
 
 		mysqlConn.query(sql, function (err, rows, fields) {
@@ -81,7 +90,7 @@ function handleLogin(request, socket) {
 			}
 
 			if (rows && rows.length > 0) {
-				defer.resolve(true);
+				defer.resolve(rows[0]);
 			} else {
 				defer.resolve(false);
 			}
