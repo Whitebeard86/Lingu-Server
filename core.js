@@ -1,7 +1,7 @@
-String.prototype.format = function() {
+String.prototype.format = function () {
 	var formatted = this;
 	for (var i = 0; i < arguments.length; i++) {
-		var regexp = new RegExp('\\{'+i+'\\}', 'gi');
+		var regexp = new RegExp('\\{' + i + '\\}', 'gi');
 		formatted = formatted.replace(regexp, arguments[i]);
 	}
 	return formatted;
@@ -9,7 +9,8 @@ String.prototype.format = function() {
 
 var ACTIONS = {
 	REGISTER: 1,
-	LOGIN: 2
+	LOGIN: 2,
+	MATCHMAKING: 3
 };
 
 var SETTINGS = {
@@ -29,6 +30,7 @@ var mysqlConn = mysql.createConnection({
 	password: SETTINGS.MYSQL.PASSWORD,
 	database: SETTINGS.MYSQL.DATABASE
 });
+var availablePlayers = {};
 
 var io = require('socket.io')(8080);
 io.on('connection', function (socket) {
@@ -39,9 +41,13 @@ io.on('connection', function (socket) {
 	});
 
 	socket.on('disconnect', function () {
-
+		if(availablePlayers[socket.id]) {
+			delete availablePlayers[socket.id];
+		}
 	});
 });
+
+console.log("ready");
 
 function onMessageReceived(msg, socket, fn) {
 	var request = JSON.parse(msg);
@@ -80,7 +86,7 @@ function handleLogin(request, socket) {
 	try {
 		//mysqlConn.connect();
 
-		var sql = "SELECT p.id_player as id, p.username as name, p.email, p.avatar_url as avatar FROM player p WHERE p.username = '" + request.username +
+		var sql = "SELECT p.id_player as id, p.username as name, p.email, p.avatar_url as avatar, p.experience FROM player p WHERE p.username = '" + request.username +
 			"' AND p.password = MD5('" + request.password + "')";
 
 		mysqlConn.query(sql, function (err, rows, fields) {
@@ -90,6 +96,18 @@ function handleLogin(request, socket) {
 			}
 
 			if (rows && rows.length > 0) {
+				// store the available player:
+				if (!availablePlayers[socket.id]) {
+					var playerdata = {
+						info: rows[0],
+						socket: socket
+					};
+
+					availablePlayers[socket.id] = playerdata;
+				}
+
+				console.log("c: " + Object.keys(availablePlayers).length);
+
 				defer.resolve(rows[0]);
 			} else {
 				defer.resolve(false);
