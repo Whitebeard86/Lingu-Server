@@ -10,7 +10,15 @@ String.prototype.format = function () {
 var ACTIONS = {
 	REGISTER: 1,
 	LOGIN: 2,
-	MATCHMAKING: 3
+	MATCHMAKING: 3,
+	MATCHMAKING_READY: 4,
+	MATCHMAKING_READY_CLIENT_OK: 5,
+	BEGIN_GAME: 6
+};
+
+var MATCH_PHASES = {
+	ACCEPTING: 1,
+	PLAYING: 2
 };
 
 var SETTINGS = {
@@ -30,19 +38,21 @@ var mysqlConn = mysql.createConnection({
 	password: SETTINGS.MYSQL.PASSWORD,
 	database: SETTINGS.MYSQL.DATABASE
 });
-var availablePlayers = {};
+
+var onlinePlayers = {};
+var matchmakingPlayers = [];
+var matches = [];
 
 var io = require('socket.io')(8080);
 io.on('connection', function (socket) {
 	console.log("person connected");
 	socket.on('message', function (message, fn) {
-		console.log(message);
+		console.log("client message: " + message);
 		onMessageReceived(message, socket, fn);
 	});
-
 	socket.on('disconnect', function () {
-		if(availablePlayers[socket.id]) {
-			delete availablePlayers[socket.id];
+		if (onlinePlayers[socket.id]) {
+			delete onlinePlayers[socket.id];
 		}
 	});
 });
@@ -51,16 +61,16 @@ console.log("ready");
 
 function onMessageReceived(msg, socket, fn) {
 	var request = JSON.parse(msg);
-
 	// is this a valid request?
 	if (request.action) {
 		var res = processRequest(request, socket);
-		console.log(typeof res);
+
 		if (res) {
 			res.then(
 				function (result) {
+					result = JSON.stringify(result);
 					console.log("gonna emit: " + result);
-					fn(JSON.stringify(result));
+					fn(result);
 				}, function (error) {
 					console.log("failed: " + error);
 					fn(JSON.stringify(error));
@@ -76,7 +86,126 @@ function processRequest(request, socket) {
 		case ACTIONS.LOGIN:
 			return handleLogin(request, socket);
 			break;
+		case ACTIONS.MATCHMAKING:
+			handleMatchmaking(request, socket);
+			break;
+		case ACTIONS.MATCHMAKING_READY_CLIENT_OK:
+			handleMatchmakingClientOK(request, socket);
+			break;
 	}
+}
+
+function sortLevelPredicate(a, b) {
+	return a.experience - b.experience;
+}
+
+function transformComplexArray(array, idToDiscard) {
+	var transformed = [];
+	for (var key in array) {
+		if(array[key].socket.id != idToDiscard) {
+			transformed.push(array[key]);
+		}
+	}
+	return transformed;
+}
+
+function sortPlayersByLevel(playerList, idToDiscard) {
+	var sortedArray = transformComplexArray(playerList, idToDiscard);
+	return sortedArray.sort(sortLevelPredicate);
+}
+
+function removePlayerFromMatchmaking(socketID) {
+	for (var i = matchmakingPlayers.length - 1; i >= 0; i--) {
+		if (matchmakingPlayers[i].socket.id == socketID) {
+			matchmakingPlayers.slice(i, 1);
+			break;
+		}
+	}
+}
+
+function getMatchById(id) {
+	for(var k in matches) {
+		if(matches[k].id == id) {
+			return matches[k];
+		}
+	}
+	return null;
+}
+
+function handleMatchmakingClientOK(request, socket) {
+	var match = getMatchById(request.matchId);
+	if(match) {
+		match.acceptedBy.push(socket.id);
+
+		if(match.acceptedBy.length == match.players.length) {
+			// both players accepted the match, let's begin!
+			var msg = {
+				action: ACTIONS.BEGIN_GAME,
+				matchId: match.id,
+				players: match.players
+			};
+
+			for(var k in match.acceptedBy) {
+				sendMessage(onlinePlayers[match.acceptedBy[k]].socket, msg);
+			}
+
+			match.phase = MATCH_PHASES.PLAYING;
+		}
+	}
+}
+
+function handleMatchmaking(request, socket) {
+	var action = function (params) {
+		var sortedPlayers = sortPlayersByLevel(onlinePlayers, socket.id);
+
+		if (sortedPlayers.length > 0) {
+			var peer = sortedPlayers[0]; // TODO: match similar player levels
+
+			// remove the queued player from the matchmaking list:
+			removePlayerFromMatchmaking(peer.socket.id);
+
+			var match = {
+				id: Math.random().toString(36).substring(8),
+				phase: MATCH_PHASES.ACCEPTING,
+				acceptedBy: [],
+				players: [
+					onlinePlayers[socket.id].info,
+					peer.info
+				]
+			};
+
+			// send a message to both players:
+			var msg = {};
+			msg.action = ACTIONS.MATCHMAKING_READY;
+			msg.matchId = match.id;
+			/*msg.gameLevel = 0; // TODO: calculate level based on players experience
+			msg.players = [
+				onlinePlayers[socket.id].info,
+				peer.info
+			];*/
+
+			sendMessage(socket, msg);
+			sendMessage(peer.socket, msg);
+
+			matches.push(match);
+
+		} else {
+			// no player available, set the player in a matchmaking list..
+			addPlayerToMatchmaking(onlinePlayers[socket.id]);
+		}
+	};
+
+	action({request: request, socket: socket});
+}
+
+function addPlayerToMatchmaking(player) {
+	for(var k in matchmakingPlayers) {
+		// player already on matchmaking list?
+		if(matchmakingPlayers[k].socket.id == player.socket.id) {
+			return;
+		}
+	}
+	matchmakingPlayers.push(player);
 }
 
 function handleLogin(request, socket) {
@@ -97,16 +226,16 @@ function handleLogin(request, socket) {
 
 			if (rows && rows.length > 0) {
 				// store the available player:
-				if (!availablePlayers[socket.id]) {
+				if (!onlinePlayers[socket.id]) {
 					var playerdata = {
 						info: rows[0],
 						socket: socket
 					};
 
-					availablePlayers[socket.id] = playerdata;
+					onlinePlayers[socket.id] = playerdata;
 				}
 
-				console.log("c: " + Object.keys(availablePlayers).length);
+				//console.log("c: " + Object.keys(onlinePlayers).length);
 
 				defer.resolve(rows[0]);
 			} else {
@@ -120,4 +249,8 @@ function handleLogin(request, socket) {
 	}
 
 	return defer.promise;
+}
+
+function sendMessage(socket, obj) {
+	socket.send(JSON.stringify(obj));
 }
