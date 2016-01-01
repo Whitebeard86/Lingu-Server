@@ -13,7 +13,8 @@ var ACTIONS = {
 	MATCHMAKING: 3,
 	MATCHMAKING_READY: 4,
 	MATCHMAKING_READY_CLIENT_OK: 5,
-	BEGIN_GAME: 6
+	BEGIN_GAME: 6,
+    REQUEST_RANKING: 7
 };
 
 var MATCH_PHASES = {
@@ -92,6 +93,9 @@ function processRequest(request, socket) {
 		case ACTIONS.MATCHMAKING_READY_CLIENT_OK:
 			handleMatchmakingClientOK(request, socket);
 			break;
+        case ACTIONS.REQUEST_RANKING:
+            return handleRanking();
+            break;
 	}
 }
 
@@ -249,6 +253,31 @@ function handleLogin(request, socket) {
 	}
 
 	return defer.promise;
+}
+
+function handleRanking() {
+    var defer = Q.defer();
+
+    try {
+        var sql = "SELECT * FROM player ORDER BY experience DESC"
+
+        mysqlConn.query(sql, function (err, rows) {
+            if (err) {
+                console.log(err);
+                defer.reject(err);
+            }
+            if (rows && rows.length > 0) {
+                defer.resolve(rows);
+            } else {
+                defer.resolve(false);
+            }
+        });
+
+    } catch (error) {
+        console.log(error);
+    }
+
+    return defer.promise;
 }
 
 function sendMessage(socket, obj) {
