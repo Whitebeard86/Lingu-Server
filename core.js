@@ -135,6 +135,8 @@ function handleGameFinish(request, socket) {
 			for (var i = 0; i < match.acceptedBy.length; i++) {
 				sendMessage(onlinePlayers[match.acceptedBy[i]].socket, msg);
 			}
+
+			removeMatch(match.id);
 		}
 	}
 }
@@ -200,6 +202,15 @@ function removePlayerFromMatchmaking(socketID) {
 	for (var i = matchmakingPlayers.length - 1; i >= 0; i--) {
 		if (matchmakingPlayers[i].socket.id == socketID) {
 			matchmakingPlayers.slice(i, 1);
+			break;
+		}
+	}
+}
+
+function removeMatch(id) {
+	for(var i = matches.length-1; i >= 0; i--) {
+		if (matches[i].id == id) {
+			matches.slice(i, 1);
 			break;
 		}
 	}
