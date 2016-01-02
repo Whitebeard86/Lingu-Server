@@ -14,7 +14,10 @@ var ACTIONS = {
 	MATCHMAKING_READY: 4,
 	MATCHMAKING_READY_CLIENT_OK: 5,
 	BEGIN_GAME: 6,
-    REQUEST_RANKING: 7
+    REQUEST_RANKING: 7,
+	CHAT_MESSAGE: 8,
+	PLAYER_ANSWERED_CORRECTLY: 9,
+	GAME_FINISH: 10
 };
 
 var MATCH_PHASES = {
@@ -93,9 +96,30 @@ function processRequest(request, socket) {
 		case ACTIONS.MATCHMAKING_READY_CLIENT_OK:
 			handleMatchmakingClientOK(request, socket);
 			break;
+		case ACTIONS.CHAT_MESSAGE:
+			handleChatMessage(request, socket);
+			break;
         case ACTIONS.REQUEST_RANKING:
             return handleRanking();
             break;
+	}
+}
+
+function handleChatMessage(request, socket) {
+	var match = getMatchById(request.matchId);
+	if(match) {
+		var msg = {
+			action: ACTIONS.CHAT_MESSAGE,
+			matchId: match.id,
+			chatMessageId: request.chatMessageId
+		};
+
+		for(var k in match.acceptedBy) {
+			// don't send the message to the player who sent it
+			if(match.acceptedBy[k].socket.id != socket.id) {
+				sendMessage(onlinePlayers[match.acceptedBy[k]].socket, msg);
+			}
+		}
 	}
 }
 
