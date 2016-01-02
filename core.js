@@ -14,7 +14,7 @@ var ACTIONS = {
 	MATCHMAKING_READY: 4,
 	MATCHMAKING_READY_CLIENT_OK: 5,
 	BEGIN_GAME: 6,
-    REQUEST_RANKING: 7,
+	REQUEST_RANKING: 7,
 	CHAT_MESSAGE: 8,
 	PLAYER_ANSWERED_CORRECTLY: 9,
 	GAME_FINISH: 10
@@ -99,25 +99,79 @@ function processRequest(request, socket) {
 		case ACTIONS.CHAT_MESSAGE:
 			handleChatMessage(request, socket);
 			break;
-        case ACTIONS.REQUEST_RANKING:
-            return handleRanking();
-            break;
+		case ACTIONS.PLAYER_ANSWERED_CORRECTLY:
+			handlePlayerAnsweredCorrectly(request, socket);
+			break;
+		case ACTIONS.GAME_FINISH:
+			handleGameFinish(request, socket);
+			break;
+		case ACTIONS.REQUEST_RANKING:
+			return handleRanking();
+			break;
+	}
+}
+
+function handleGameFinish(request, socket) {
+	var match = getMatchById(request.matchId);
+	if (match) {
+		match.finishedBy.push(socket.id);
+
+		if (match.finishedBy.length >= match.players.length) {
+			var pointsInfo = {};
+			for(var i = 0; i < match.players.length; i++) {
+				var arr = {};
+				arr.playerInfo = match.players[i];
+				arr.points = match.points[match.players[i].socketId];
+				pointsInfo.push(arr);
+			}
+
+			// all players finished, let's present some results:
+			var msg = {
+				action: ACTIONS.GAME_FINISH,
+				matchId: match.id,
+				pointsInfo: pointsInfo
+			};
+
+			for (var i = 0; i < match.acceptedBy.length; i++) {
+				sendMessage(onlinePlayers[match.acceptedBy[i]].socket, msg);
+			}
+		}
+	}
+}
+
+function handlePlayerAnsweredCorrectly(request, socket) {
+	var match = getMatchById(request.matchId);
+	if (match) {
+		match.points[socket.id]+=1;
+
+		var msg = {
+			action: ACTIONS.PLAYER_ANSWERED_CORRECTLY,
+			playerInfo: onlinePlayers[socket.id].info,
+			matchId: match.id
+		};
+
+		for (var i = 0; i < match.acceptedBy.length; i++) {
+			// don't send the message to the player who sent it
+			if (match.acceptedBy[i] != socket.id) {
+				sendMessage(onlinePlayers[match.acceptedBy[i]].socket, msg);
+			}
+		}
 	}
 }
 
 function handleChatMessage(request, socket) {
 	var match = getMatchById(request.matchId);
-	if(match) {
+	if (match) {
 		var msg = {
 			action: ACTIONS.CHAT_MESSAGE,
 			matchId: match.id,
 			chatMessageId: request.chatMessageId
 		};
 
-		for(var k in match.acceptedBy) {
+		for (var i = 0; i < match.acceptedBy.length; i++) {
 			// don't send the message to the player who sent it
-			if(match.acceptedBy[k].socket.id != socket.id) {
-				sendMessage(onlinePlayers[match.acceptedBy[k]].socket, msg);
+			if (match.acceptedBy[i] != socket.id) {
+				sendMessage(onlinePlayers[match.acceptedBy[i]].socket, msg);
 			}
 		}
 	}
@@ -130,7 +184,7 @@ function sortLevelPredicate(a, b) {
 function transformComplexArray(array, idToDiscard) {
 	var transformed = [];
 	for (var key in array) {
-		if(array[key].socket.id != idToDiscard) {
+		if (array[key].socket.id != idToDiscard) {
 			transformed.push(array[key]);
 		}
 	}
@@ -152,8 +206,8 @@ function removePlayerFromMatchmaking(socketID) {
 }
 
 function getMatchById(id) {
-	for(var k in matches) {
-		if(matches[k].id == id) {
+	for (var k in matches) {
+		if (matches[k].id == id) {
 			return matches[k];
 		}
 	}
@@ -162,10 +216,10 @@ function getMatchById(id) {
 
 function handleMatchmakingClientOK(request, socket) {
 	var match = getMatchById(request.matchId);
-	if(match) {
+	if (match) {
 		match.acceptedBy.push(socket.id);
 
-		if(match.acceptedBy.length == match.players.length) {
+		if (match.acceptedBy.length >= match.players.length) {
 			// both players accepted the match, let's begin!
 			var msg = {
 				action: ACTIONS.BEGIN_GAME,
@@ -173,7 +227,7 @@ function handleMatchmakingClientOK(request, socket) {
 				players: match.players
 			};
 
-			for(var k in match.acceptedBy) {
+			for (var k in match.acceptedBy) {
 				sendMessage(onlinePlayers[match.acceptedBy[k]].socket, msg);
 			}
 
@@ -196,6 +250,8 @@ function handleMatchmaking(request, socket) {
 				id: Math.random().toString(36).substring(8),
 				phase: MATCH_PHASES.ACCEPTING,
 				acceptedBy: [],
+				finishedBy: [],
+				points: {},
 				players: [
 					onlinePlayers[socket.id].info,
 					peer.info
@@ -207,10 +263,14 @@ function handleMatchmaking(request, socket) {
 			msg.action = ACTIONS.MATCHMAKING_READY;
 			msg.matchId = match.id;
 			/*msg.gameLevel = 0; // TODO: calculate level based on players experience
-			msg.players = [
-				onlinePlayers[socket.id].info,
-				peer.info
-			];*/
+			 msg.players = [
+			 onlinePlayers[socket.id].info,
+			 peer.info
+			 ];*/
+
+			for (var k = 0; k < match.players.length; k++) {
+				match.points[match.players[k].socketId] = 0;
+			}
 
 			sendMessage(socket, msg);
 			sendMessage(peer.socket, msg);
@@ -227,9 +287,9 @@ function handleMatchmaking(request, socket) {
 }
 
 function addPlayerToMatchmaking(player) {
-	for(var k in matchmakingPlayers) {
+	for (var k in matchmakingPlayers) {
 		// player already on matchmaking list?
-		if(matchmakingPlayers[k].socket.id == player.socket.id) {
+		if (matchmakingPlayers[k].socket.id == player.socket.id) {
 			return;
 		}
 	}
@@ -260,6 +320,8 @@ function handleLogin(request, socket) {
 						socket: socket
 					};
 
+					playerdata.info.socketId = socket.id;
+
 					onlinePlayers[socket.id] = playerdata;
 				}
 
@@ -280,28 +342,28 @@ function handleLogin(request, socket) {
 }
 
 function handleRanking() {
-    var defer = Q.defer();
+	var defer = Q.defer();
 
-    try {
-        var sql = "SELECT * FROM player ORDER BY experience DESC"
+	try {
+		var sql = "SELECT * FROM player ORDER BY experience DESC"
 
-        mysqlConn.query(sql, function (err, rows) {
-            if (err) {
-                console.log(err);
-                defer.reject(err);
-            }
-            if (rows && rows.length > 0) {
-                defer.resolve(rows);
-            } else {
-                defer.resolve(false);
-            }
-        });
+		mysqlConn.query(sql, function (err, rows) {
+			if (err) {
+				console.log(err);
+				defer.reject(err);
+			}
+			if (rows && rows.length > 0) {
+				defer.resolve(rows);
+			} else {
+				defer.resolve(false);
+			}
+		});
 
-    } catch (error) {
-        console.log(error);
-    }
+	} catch (error) {
+		console.log(error);
+	}
 
-    return defer.promise;
+	return defer.promise;
 }
 
 function sendMessage(socket, obj) {
