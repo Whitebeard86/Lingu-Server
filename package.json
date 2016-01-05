@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Lingu Server Application",
   "dependencies": {
-    "express": "^4.10.6",
+    "express": "^4.13.3",
     "mysql": "^2.9.0",
     "q": "^1.4.1",
     "socket.io": "^1.3.7"

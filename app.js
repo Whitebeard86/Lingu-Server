@@ -35,9 +35,21 @@ var SETTINGS = {
 };
 
 // process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT ||
-var PORT = 3000;
+var PORT = process.env.OPENSHIFT_NODEJS_PORT || 3000;
+var IP_ADDRESS = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
 var Q = require('q');
+var express = require('express');
 var mysql = require('mysql');
+var app = express();
+var http = require('http');
+
+app.set('port', PORT);
+app.set('ip', IP_ADDRESS);
+
+http.createServer(app).listen(app.get('port'), app.get('ip'), function () {
+	console.log("✔ Express server listening at %s:%d ", app.get('ip'),app.get('port'));
+});
+
 var mysqlConn = mysql.createConnection({
 	host: SETTINGS.MYSQL.HOST_NAME,
 	user: SETTINGS.MYSQL.USER,
