@@ -43,9 +43,9 @@ var express = require('express');
 var mysql = require('mysql');
 var app = express();
 var http = require('http');
-var io = require('socket.io').listen(http);
+var io = require('socket.io')(http).listen(SOCKET_PORT);
 
-app.use(function (req, res, next) {
+/*app.use(function (req, res, next) {
 
 	// Website you wish to allow to connect
 	res.setHeader('Access-Control-Allow-Origin', '*');
@@ -62,7 +62,7 @@ app.use(function (req, res, next) {
 
 	// Pass to next layer of middleware
 	next();
-});
+});*/
 
 app.set('port', PORT);
 app.set('ip', IP_ADDRESS);
@@ -70,6 +70,8 @@ app.set('ip', IP_ADDRESS);
 http.createServer(app).listen(app.get('port'), app.get('ip'), function () {
 	console.log("✔ Express server listening at %s:%d ", app.get('ip'),app.get('port'));
 });
+
+
 
 var mysqlConn = mysql.createConnection({
 	host: SETTINGS.MYSQL.HOST_NAME,
