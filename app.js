@@ -34,6 +34,7 @@ var SETTINGS = {
 	}
 };
 
+var PORT = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || 8080;
 var Q = require('q');
 var mysql = require('mysql');
 var mysqlConn = mysql.createConnection({
@@ -47,7 +48,7 @@ var onlinePlayers = {};
 var matchmakingPlayers = [];
 var matches = [];
 
-var io = require('socket.io')(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || 8080);
+var io = require('socket.io')(PORT);
 io.on('connection', function (socket) {
 	console.log("person connected");
 	socket.on('message', function (message, fn) {
@@ -61,7 +62,7 @@ io.on('connection', function (socket) {
 	});
 });
 
-console.log("ready");
+console.log("ready on " + PORT);
 
 function onMessageReceived(msg, socket, fn) {
 	var request = JSON.parse(msg);
