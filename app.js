@@ -35,7 +35,7 @@ var SETTINGS = {
 };
 
 // process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT ||
-var PORT = process.env.OPENSHIFT_NODEJS_PORT || 3000;
+var PORT = process.env.OPENSHIFT_NODEJS_PORT || 8080;
 var SOCKET_PORT = 3000;
 var IP_ADDRESS = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
 var Q = require('q');
@@ -62,7 +62,7 @@ var onlinePlayers = {};
 var matchmakingPlayers = [];
 var matches = [];
 
-var io = require('socket.io')(SOCKET_PORT);
+var io = require('socket.io')(PORT);
 io.on('connection', function (socket) {
 	console.log("person connected");
 	socket.on('message', function (message, fn) {
