@@ -34,7 +34,8 @@ var SETTINGS = {
 	}
 };
 
-var PORT = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || 3000;
+// process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT ||
+var PORT = 3000;
 var Q = require('q');
 var mysql = require('mysql');
 var mysqlConn = mysql.createConnection({
