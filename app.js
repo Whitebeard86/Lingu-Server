@@ -43,7 +43,7 @@ var express = require('express');
 var mysql = require('mysql');
 var app = express();
 var http = require('http');
-var io = require('socket.io')(http).listen(SOCKET_PORT);
+var io = require('socket.io')(http).listen(SOCKET_PORT); 
 
 /*app.use(function (req, res, next) {
 
