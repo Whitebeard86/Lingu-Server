@@ -47,7 +47,7 @@ var onlinePlayers = {};
 var matchmakingPlayers = [];
 var matches = [];
 
-var io = require('socket.io')(process.env.OPENSHIFT_NODEJS_PORT || 8080);
+var io = require('socket.io')(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || 8080);
 io.on('connection', function (socket) {
 	console.log("person connected");
 	socket.on('message', function (message, fn) {
