@@ -36,13 +36,33 @@ var SETTINGS = {
 
 // process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT ||
 var PORT = process.env.OPENSHIFT_NODEJS_PORT || 8080;
-var SOCKET_PORT = 3000;
-var IP_ADDRESS = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
+var SOCKET_PORT = 8000;
+var IP_ADDRESS = process.env.OPENSHIFT_NODEJS_IP || 'localhost';
 var Q = require('q');
 var express = require('express');
 var mysql = require('mysql');
 var app = express();
 var http = require('http');
+var io = require('socket.io')(SOCKET_PORT);
+
+app.use(function (req, res, next) {
+
+	// Website you wish to allow to connect
+	res.setHeader('Access-Control-Allow-Origin', '*');
+
+	// Request methods you wish to allow
+	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+
+	// Request headers you wish to allow
+	res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+
+	// Set to true if you need the website to include cookies in the requests sent
+	// to the API (e.g. in case you use sessions)
+	res.setHeader('Access-Control-Allow-Credentials', false);
+
+	// Pass to next layer of middleware
+	next();
+});
 
 app.set('port', PORT);
 app.set('ip', IP_ADDRESS);
@@ -62,7 +82,6 @@ var onlinePlayers = {};
 var matchmakingPlayers = [];
 var matches = [];
 
-var io = require('socket.io')(PORT);
 io.on('connection', function (socket) {
 	console.log("person connected");
 	socket.on('message', function (message, fn) {
