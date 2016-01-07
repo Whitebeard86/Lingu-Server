@@ -90,6 +90,7 @@ io.on('connection', function (socket) {
 	});
 	socket.on('disconnect', function () {
 		if (onlinePlayers[socket.id]) {
+			removePlayerFromMatchmaking(socket.id);
 			delete onlinePlayers[socket.id];
 		}
 	});
@@ -149,9 +150,9 @@ function handleGameFinish(request, socket) {
 	var match = getMatchById(request.matchId);
 	if (match) {
 		match.finishedBy.push(socket.id);
-
+		console.log("Game finished by: " + socket.id);
 		if (match.finishedBy.length >= match.players.length) {
-			var pointsInfo = {};
+			var pointsInfo = [];
 			//
 			for(var i = 0; i < match.players.length; i++) {
 				var arr = {};
@@ -173,9 +174,16 @@ function handleGameFinish(request, socket) {
 					break;
 				}
 			}
+
 			if(winnerId != -1) {
 				// update experience:
-				
+				try {
+					var sql = "UPDATE player SET player.experience = player.experience+1 WHERE player.id_player = " + onlinePlayers[winnerId].info.id;
+					console.log(sql);
+					mysqlConn.query(sql);
+				} catch (error) {
+					console.log(error);
+				}
 			}
 
 			// all players finished, let's present some results:
@@ -261,12 +269,14 @@ function removePlayerFromMatchmaking(socketID) {
 }
 
 function removeMatch(id) {
+	console.log("trying to remove match with id: " + id + " (" + matches.length + " matches running)");
 	for(var i = matches.length-1; i >= 0; i--) {
 		if (matches[i].id == id) {
-			matches.slice(i, 1);
+			matches.splice(i, 1);
 			break;
 		}
 	}
+	console.log(matches.length + " matches running");
 }
 
 function getMatchById(id) {
@@ -352,9 +362,11 @@ function handleMatchmaking(request, socket) {
 
 function addPlayerToMatchmaking(player) {
 	for (var k in matchmakingPlayers) {
-		// player already on matchmaking list?
-		if (matchmakingPlayers[k].socket.id == player.socket.id) {
-			return;
+		if(matchmakingPlayers[k]) {
+			// player already on matchmaking list?
+			if (matchmakingPlayers[k].socket.id == player.socket.id) {
+				return;
+			}
 		}
 	}
 	matchmakingPlayers.push(player);
