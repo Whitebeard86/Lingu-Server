@@ -302,7 +302,6 @@ function sortPlayersByLevel(playerList, idToDiscard) {
 
 function purgeUser(userEmail) {
 	console.log("purging user: " + userEmail);
-	removePlayerFromMatchmaking(userEmail);
 
 	//remove existing matches where the player is active:
 	for(var i = matches.length-1; i >= 0; i--) {
@@ -313,6 +312,10 @@ function purgeUser(userEmail) {
 			}
 		}
 	}
+
+	console.log("active matches: " + matches.length);
+
+	removePlayerFromMatchmaking(userEmail);
 }
 
 function removePlayerFromMatchmaking(userEmail) {
@@ -348,6 +351,7 @@ function removeMatch(id) {
 function getMatchById(id) {
 	for (var k in matches) {
 		if (matches[k].id == id) {
+			console.log("match " + id + " found!");
 			return matches[k];
 		}
 	}
