@@ -17,7 +17,8 @@ var ACTIONS = {
 	REQUEST_RANKING: 7,
 	CHAT_MESSAGE: 8,
 	PLAYER_ANSWERED_CORRECTLY: 9,
-	GAME_FINISH: 10
+	GAME_FINISH: 10,
+	GET_PLAYER_INFO: 11
 };
 
 var MATCH_PHASES = {
@@ -104,7 +105,7 @@ function onMessageReceived(msg, socket, fn) {
 	if (request.action) {
 		var res = processRequest(request, socket);
 
-		if (res) {
+		if (res && res.then) {
 			res.then(
 				function (result) {
 					result = JSON.stringify(result);
@@ -116,7 +117,6 @@ function onMessageReceived(msg, socket, fn) {
 				}
 			);
 		}
-
 	}
 }
 
@@ -143,7 +143,31 @@ function processRequest(request, socket) {
 		case ACTIONS.REQUEST_RANKING:
 			return handleRanking();
 			break;
+		case ACTIONS.GET_PLAYER_INFO:
+			return handleGetPlayerInfo(request, socket);
+			break;
 	}
+}
+
+function handleGetPlayerInfo(request, socket) {
+	var defer = Q.defer();
+	var playerinfo = onlinePlayers[socket.id].info;
+	if(playerinfo) {
+		var sql = "SELECT p.id_player as id, p.username as name, p.email, p.avatar_url as avatar, p.experience, p.city FROM player p WHERE p.id_player = " + playerinfo.id;
+		mysqlConn.query(sql, function (err, rows) {
+			if (err) {
+				console.log(err);
+				defer.reject(err);
+			}
+
+			if (rows && rows.length > 0) {
+				defer.resolve(rows[0]);
+			} else {
+				defer.resolve(false);
+			}
+		});
+	}
+	return defer.promise;
 }
 
 function handleGameFinish(request, socket) {
@@ -254,8 +278,17 @@ function transformComplexArray(array, idToDiscard) {
 	return transformed;
 }
 
+
 function sortPlayersByLevel(playerList, idToDiscard) {
-	var sortedArray =  playerList;//transformComplexArray(playerList, idToDiscard);
+	var sortedArray = playerList.slice();//transformComplexArray(playerList, idToDiscard);
+
+	// remove the existing player if it's already matchmaking:
+	for(var i = sortedArray.length-1; i >= 0 ; i--) {
+		if(sortedArray[i].socket.id == idToDiscard) {
+			sortedArray.splice(i, 1);
+		}
+	}
+
 	return sortedArray.sort(sortLevelPredicate);
 }
 
@@ -379,7 +412,7 @@ function handleLogin(request, socket) {
 	try {
 		//mysqlConn.connect();
 
-		var sql = "SELECT p.id_player as id, p.username as name, p.email, p.avatar_url as avatar, p.experience FROM player p WHERE p.username = '" + request.username +
+		var sql = "SELECT p.id_player as id, p.username as name, p.email, p.avatar_url as avatar, p.experience, p.city FROM player p WHERE p.username = '" + request.username +
 			"' AND p.password = MD5('" + request.password + "')";
 
 		mysqlConn.query(sql, function (err, rows, fields) {
@@ -421,7 +454,7 @@ function handleRanking() {
 	var defer = Q.defer();
 
 	try {
-		var sql = "SELECT * FROM player ORDER BY experience DESC"
+		var sql = "SELECT * FROM player ORDER BY experience DESC";
 
 		mysqlConn.query(sql, function (err, rows) {
 			if (err) {
