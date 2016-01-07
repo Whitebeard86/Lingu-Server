@@ -86,8 +86,12 @@ var matches = [];
 io.on('connection', function (socket) {
 	console.log("person connected");
 	socket.on('message', function (message, fn) {
-		console.log("client message: " + message);
-		onMessageReceived(message, socket, fn);
+		try {
+			console.log("client message: " + message);
+			onMessageReceived(message, socket, fn);
+		} catch(error) {
+			console.log(error.message);
+		}
 	});
 	socket.on('disconnect', function () {
 		if (onlinePlayers[socket.id]) {
