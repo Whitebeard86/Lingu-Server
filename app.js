@@ -91,7 +91,7 @@ io.on('connection', function (socket) {
 	});
 	socket.on('disconnect', function () {
 		if (onlinePlayers[socket.id]) {
-			removePlayerFromMatchmaking(socket.id);
+			purgeUser(onlinePlayers[socket.id].info.email);
 			delete onlinePlayers[socket.id];
 		}
 	});
@@ -292,14 +292,37 @@ function sortPlayersByLevel(playerList, idToDiscard) {
 	return sortedArray.sort(sortLevelPredicate);
 }
 
-function removePlayerFromMatchmaking(socketID) {
+function purgeUser(userEmail) {
+	console.log("purging user: " + userEmail);
+	removePlayerFromMatchmaking(userEmail);
+
+	//remove existing matches where the player is active:
+	for(var i = matches.length-1; i >= 0; i--) {
+		for(var j = 0; j < matches[i].players.length; j++) {
+			if(matches[i].players[j].email == userEmail) {
+				matches.splice(i, 1);
+				break;
+			}
+		}
+	}
+}
+
+function removePlayerFromMatchmaking(userEmail) {
+	for (var i = matchmakingPlayers.length - 1; i >= 0; i--) {
+		if (matchmakingPlayers[i].info.email == userEmail) {
+			matchmakingPlayers.splice(i, 1);
+		}
+	}
+}
+
+/*function removePlayerFromMatchmaking(socketID) {
 	for (var i = matchmakingPlayers.length - 1; i >= 0; i--) {
 		if (matchmakingPlayers[i].socket.id == socketID) {
 			matchmakingPlayers.splice(i, 1);
 			break;
 		}
 	}
-}
+}*/
 
 function removeMatch(id) {
 	console.log("trying to remove match with id: " + id + " (" + matches.length + " matches running)");
