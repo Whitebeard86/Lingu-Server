@@ -152,11 +152,30 @@ function handleGameFinish(request, socket) {
 
 		if (match.finishedBy.length >= match.players.length) {
 			var pointsInfo = {};
+			//
 			for(var i = 0; i < match.players.length; i++) {
 				var arr = {};
 				arr.playerInfo = match.players[i];
 				arr.points = match.points[match.players[i].socketId];
 				pointsInfo.push(arr);
+			}
+
+			// check points and set/update player experience:
+			var highestPoint = -1;
+			var winnerId = -1;
+			for(var i = 0; i < match.players.length; i++) {
+				if(match.points[match.players[i].socketId] > highestPoint) {
+					highestPoint = match.points[match.players[i].socketId];
+					winnerId = match.players[i].socketId;
+				} else if(match.points[match.players[i].socketId] == highestPoint) {
+					// draw..
+					winnerId = -1;
+					break;
+				}
+			}
+			if(winnerId != -1) {
+				// update experience:
+				
 			}
 
 			// all players finished, let's present some results:
