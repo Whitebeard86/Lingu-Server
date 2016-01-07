@@ -94,9 +94,13 @@ io.on('connection', function (socket) {
 		}
 	});
 	socket.on('disconnect', function () {
-		if (onlinePlayers[socket.id]) {
-			purgeUser(onlinePlayers[socket.id].info.email);
-			delete onlinePlayers[socket.id];
+		try {
+			if (onlinePlayers[socket.id]) {
+				purgeUser(onlinePlayers[socket.id].info.email);
+				delete onlinePlayers[socket.id];
+			}
+		} catch(error) {
+			console.log(error.message);
 		}
 	});
 });
