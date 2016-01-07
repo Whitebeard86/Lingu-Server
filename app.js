@@ -255,14 +255,14 @@ function transformComplexArray(array, idToDiscard) {
 }
 
 function sortPlayersByLevel(playerList, idToDiscard) {
-	var sortedArray = transformComplexArray(playerList, idToDiscard);
+	var sortedArray =  playerList;//transformComplexArray(playerList, idToDiscard);
 	return sortedArray.sort(sortLevelPredicate);
 }
 
 function removePlayerFromMatchmaking(socketID) {
 	for (var i = matchmakingPlayers.length - 1; i >= 0; i--) {
 		if (matchmakingPlayers[i].socket.id == socketID) {
-			matchmakingPlayers.slice(i, 1);
+			matchmakingPlayers.splice(i, 1);
 			break;
 		}
 	}
@@ -312,7 +312,7 @@ function handleMatchmakingClientOK(request, socket) {
 
 function handleMatchmaking(request, socket) {
 	var action = function (params) {
-		var sortedPlayers = sortPlayersByLevel(onlinePlayers, socket.id);
+		var sortedPlayers = sortPlayersByLevel(matchmakingPlayers, socket.id);
 
 		if (sortedPlayers.length > 0) {
 			var peer = sortedPlayers[0]; // TODO: match similar player levels
