@@ -313,8 +313,10 @@ function purgeUser(userEmail) {
 
 function removePlayerFromMatchmaking(userEmail) {
 	for (var i = matchmakingPlayers.length - 1; i >= 0; i--) {
-		if (matchmakingPlayers[i].info.email == userEmail) {
-			matchmakingPlayers.splice(i, 1);
+		if (matchmakingPlayers[i] && (matchmakingPlayers[i].info)) {
+			if (matchmakingPlayers[i].info.email == userEmail) {
+				matchmakingPlayers.splice(i, 1);
+			}
 		}
 	}
 }
